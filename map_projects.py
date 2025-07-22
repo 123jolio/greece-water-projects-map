@@ -2296,7 +2296,7 @@ def main():
                 key='download_csv_main'
             )
         with col2:
-            excel_data = io.BytesIO()
+            excel_data = BytesIO()
             with pd.ExcelWriter(excel_data, engine='openpyxl') as writer:
                 export_df.to_excel(writer, index=False, sheet_name='Projects')
             excel_data.seek(0)
