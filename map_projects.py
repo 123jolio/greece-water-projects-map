@@ -8,8 +8,7 @@ from streamlit_folium import st_folium
 import plotly.express as px
 import plotly.graph_objects as go
 from io import BytesIO
-import re
-import openpyxl 
+import re 
 
 # Comprehensive Greek Regions and Prefectures with coordinates
 GREEK_PREFECTURES_COORDS = {
@@ -1300,7 +1299,7 @@ def create_interactive_charts(df, selected_region=None, selected_prefecture=None
                 showlegend=True,
                 height=400
             )
-            st.plotly_chart(fig, use_container_width=True, key="regional_pie_chart")
+            st.plotly_chart(fig, use_container_width=True)
         else:
             st.info("📍 Μία περιφέρεια επιλεγμένη")
     
@@ -1324,16 +1323,16 @@ def create_interactive_charts(df, selected_region=None, selected_prefecture=None
             
             fig.update_layout(
                 title={
-                    'text': "🏛️ Top 10 Νομοί σε Αριθμό Έργων",
+                    'text': "🏛️ Top 10 Νομοί (Αριθμός έργων)",
                     'x': 0.5,
                     'xanchor': 'center'
                 },
+                yaxis={'categoryorder': 'total ascending'},
                 xaxis_title="Αριθμός Έργων",
                 yaxis_title="Νομός",
-                height=400,
-                yaxis={'categoryorder': 'total ascending'}
+                height=400
             )
-            st.plotly_chart(fig, use_container_width=True, key="prefecture_bar_chart")
+            st.plotly_chart(fig, use_container_width=True)
     
     # Second row - Project types and DEYA distribution
     col1, col2 = st.columns(2)
@@ -1367,7 +1366,7 @@ def create_interactive_charts(df, selected_region=None, selected_prefecture=None
                     xaxis={'tickangle': 45},
                     height=400
                 )
-                st.plotly_chart(fig, use_container_width=True, key="project_types_bar_chart")
+                st.plotly_chart(fig, use_container_width=True)
             else:
                 st.info("🏗️ Δεν υπάρχουν δεδομένα ειδών έργων")
     
@@ -1395,7 +1394,7 @@ def create_interactive_charts(df, selected_region=None, selected_prefecture=None
                 showlegend=False,
                 height=400
             )
-            st.plotly_chart(fig, use_container_width=True, key="deya_pie_chart")
+            st.plotly_chart(fig, use_container_width=True)
     
     # Third row - Budget and Population analysis
     col1, col2 = st.columns(2)
@@ -1432,7 +1431,7 @@ def create_interactive_charts(df, selected_region=None, selected_prefecture=None
                     },
                     height=400
                 )
-                st.plotly_chart(fig, use_container_width=True, key="budget_distribution_pie_chart")
+                st.plotly_chart(fig, use_container_width=True)
             else:
                 st.info("💰 Δεν υπάρχουν δεδομένα προϋπολογισμών")
         else:
@@ -1476,7 +1475,7 @@ def create_interactive_charts(df, selected_region=None, selected_prefecture=None
                     xaxis={'tickangle': 45},
                     height=400
                 )
-                st.plotly_chart(fig, use_container_width=True, key="priority_distribution_bar_chart")
+                st.plotly_chart(fig, use_container_width=True)
             else:
                 st.info("⭐ Δεν υπάρχουν δεδομένα προτεραιοτήτων")
         else:
@@ -1511,7 +1510,7 @@ def create_interactive_charts(df, selected_region=None, selected_prefecture=None
                     yaxis_title="Αριθμός Έργων",
                     height=400
                 )
-                st.plotly_chart(fig, use_container_width=True, key="timeline_histogram_chart")
+                st.plotly_chart(fig, use_container_width=True)
             else:
                 st.info("⏱️ Δεν υπάρχουν δεδομένα χρόνου")
         else:
@@ -1553,7 +1552,7 @@ def create_interactive_charts(df, selected_region=None, selected_prefecture=None
                     yaxis_title="Αριθμός Έργων",
                     height=400
                 )
-                st.plotly_chart(fig, use_container_width=True, key="population_distribution_bar_chart")
+                st.plotly_chart(fig, use_container_width=True)
             else:
                 st.info("👥 Δεν υπάρχουν δεδομένα πληθυσμού")
         else:
@@ -1596,7 +1595,7 @@ def create_interactive_charts(df, selected_region=None, selected_prefecture=None
             height=600,
             yaxis={'categoryorder': 'total ascending'}
         )
-        st.plotly_chart(fig, use_container_width=True, key="top_deya_bar_chart")
+        st.plotly_chart(fig, use_container_width=True)
     
     with col2:
         # Κατανομή έργων ανά μέγεθος ΔΕΥΑ
@@ -1630,7 +1629,7 @@ def create_interactive_charts(df, selected_region=None, selected_prefecture=None
             title="📊 Κατανομή ΔΕΥΑ ανά Μέγεθος",
             height=600
         )
-        st.plotly_chart(fig, use_container_width=True, key="deya_size_distribution_pie_chart")
+        st.plotly_chart(fig, use_container_width=True)
 
 def create_project_progress_analysis(df, selected_region, selected_prefecture):
     """Create comprehensive project progress analysis tab."""
@@ -1696,10 +1695,11 @@ def create_project_progress_analysis(df, selected_region, selected_prefecture):
             st.metric("✅ Έργα με Έγκριση", f"{approval_count:,}")
     
     # Detailed Progress Analysis
-    tab1, tab2, tab3 = st.tabs([
+    tab1, tab2, tab3, tab4 = st.tabs([
         "📊 Ανάλυση Φάσεων", 
         "📈 Ανάλυση Ολοκλήρωσης", 
-        "📅 Χρονική Ανάλυση"
+        "📅 Χρονική Ανάλυση", 
+        "💰 Ανάλυση Χρηματοδότησης"
     ])
     
     with tab1:
@@ -1710,6 +1710,9 @@ def create_project_progress_analysis(df, selected_region, selected_prefecture):
     
     with tab3:
         create_timeline_analysis(df)
+    
+    with tab4:
+        create_funding_analysis(df, selected_region, selected_prefecture)
 
 def create_phase_analysis(df):
     """Detailed project phase analysis."""
@@ -1759,7 +1762,7 @@ def create_phase_analysis(df):
             height=500,
             yaxis={'categoryorder': 'total ascending'}
         )
-        st.plotly_chart(fig, use_container_width=True, key="phase_distribution_bar_chart")
+        st.plotly_chart(fig, use_container_width=True)
     
     with col2:
         # Phase progression pie chart
@@ -1774,7 +1777,7 @@ def create_phase_analysis(df):
             title="🔄 Κυκλική Κατανομή Φάσεων",
             height=500
         )
-        st.plotly_chart(fig, use_container_width=True, key="phase_progression_pie_chart")
+        st.plotly_chart(fig, use_container_width=True)
     
     # Phase progression mapping
     st.subheader("📋 Κατηγοριοποίηση Φάσεων")
@@ -1822,7 +1825,7 @@ def create_phase_analysis(df):
             yaxis_title="Αριθμός Έργων",
             height=400
         )
-        st.plotly_chart(fig, use_container_width=True, key="phase_category_bar_chart")
+        st.plotly_chart(fig, use_container_width=True)
     
     with col2:
         # Progress funnel
@@ -1840,7 +1843,7 @@ def create_phase_analysis(df):
                 title="🔽 Διαδικασία Εξέλιξης Έργων",
                 height=400
             )
-            st.plotly_chart(fig, use_container_width=True, key="phase_progression_funnel")
+            st.plotly_chart(fig, use_container_width=True)
     
     # Detailed phase table
     st.subheader("📋 Λεπτομερής Πίνακας Φάσεων")
@@ -1916,7 +1919,7 @@ def create_completion_analysis(df):
             yaxis_title="Αριθμός Έργων",
             height=400
         )
-        st.plotly_chart(fig, use_container_width=True, key="completion_distribution_histogram")
+        st.plotly_chart(fig, use_container_width=True)
     
     with col2:
         # Completion ranges
@@ -1942,7 +1945,7 @@ def create_completion_analysis(df):
             title="🎯 Κατηγορίες Προόδου",
             height=400
         )
-        st.plotly_chart(fig, use_container_width=True, key="completion_ranges_pie_chart")
+        st.plotly_chart(fig, use_container_width=True)
 
 def create_timeline_analysis(df):
     """Analyze project timelines and dates."""
@@ -2034,7 +2037,7 @@ def create_timeline_analysis(df):
         yaxis_title="Αριθμός Ημερομηνιών",
         height=400
     )
-    st.plotly_chart(fig, use_container_width=True, key="timeline_scatter_chart")
+    st.plotly_chart(fig, use_container_width=True)
 
 def create_funding_analysis(df, selected_region, selected_prefecture):
     """Analyze project funding sources."""
@@ -2084,7 +2087,7 @@ def create_funding_analysis(df, selected_region, selected_prefecture):
             height=500,
             yaxis={'categoryorder': 'total ascending'}
         )
-        st.plotly_chart(fig, use_container_width=True, key="funding_sources_bar_chart")
+        st.plotly_chart(fig, use_container_width=True)
     
     with col2:
         # Funding pie chart
@@ -2098,7 +2101,7 @@ def create_funding_analysis(df, selected_region, selected_prefecture):
             title="🔄 Ποσοστιαία Κατανομή Χρηματοδότησης",
             height=500
         )
-        st.plotly_chart(fig, use_container_width=True, key="funding_sources_pie_chart")
+        st.plotly_chart(fig, use_container_width=True)
     
     # Detailed funding table
     st.subheader("📋 Λεπτομερής Πίνακας Χρηματοδότησης")
@@ -2190,10 +2193,8 @@ def create_summary_tables(df, selected_region=None, selected_prefecture=None):
         'Νομός': 'Νομός',
         'Περιφέρεια': 'Περιφέρεια'
     }).sort_values('Αριθμός Έργων', ascending=False)
-
-def convert_df(df):
-    # IMPORTANT: Cache the conversion to prevent computation on every rerun
-    return df.to_csv(index=False).encode('utf-8')
+    
+    st.dataframe(deya_summary.head(20), use_container_width=True)
 
 def main():
     """Main function to run the Streamlit app."""
@@ -2201,54 +2202,200 @@ def main():
     
     # --- Sidebar --- #
     with st.sidebar:
+        # Construct path to logo relative to the script
+        script_dir = os.path.dirname(os.path.abspath(__file__))
+        # The logo is one directory up from the script's directory
+        logo_path = os.path.join(script_dir, "..", "loho.png")
+
+        if os.path.exists(logo_path):
+            st.image(logo_path, use_container_width=True)
+        else:
+            st.warning(f"Δεν βρέθηκε το αρχείο του λογότυπου: {logo_path}")
         st.title("🗺️ Διαδραστικός Χάρτης Έργων Ύδρευσης")
+    
+    st.title("🗺️ Διαδραστικός Χάρτης Έργων Ύδρευσης Ελλάδας")
+    st.markdown("**🚀 Διαδραστική ανάλυση έργων ύδρευσης ανά νομό και περιφέρεια**")
+    
+    # Enhanced sidebar
+    with st.sidebar:
         st.header("📂 Φόρτωση Δεδομένων")
+        
         uploaded_file = st.file_uploader(
             "📊 Ανεβάστε το Excel αρχείο:", 
             type=['xlsx', 'xls'],
             help="Επιλέξτε αρχείο Excel με έργα ύδρευσης"
         )
         
-        if uploaded_file is None:
-            st.warning("⚠️ Παρακαλώ ανεβάστε ένα αρχείο Excel για να συνεχίσετε.")
-            st.stop()
-
-    # Load and process data
-    df = load_data(uploaded_file)
-    df = preprocess_data(df)
-
-    # --- Sidebar Filters ---
-    with st.sidebar:
-        st.header("🔍 Φίλτρα")
-        available_regions = ['Όλες'] + sorted(df['Περιφέρεια'].unique().tolist())
-        selected_region = st.selectbox("🌍 Επιλογή Περιφέρειας", available_regions, key='selected_region')
-
-        if selected_region == 'Όλες':
-            available_prefectures = ['Όλοι'] + sorted(df['Νομός'].unique().tolist())
+        if uploaded_file:
+            with st.spinner("⏳ Φόρτωση και ανάλυση δεδομένων..."):
+                df = load_and_analyze_excel_enhanced(uploaded_file)
+                
+                if df is not None:
+                    st.session_state['df'] = df
+                    st.success(f"✅ Επιτυχής φόρτωση!")
+                    
+                    # Enhanced statistics in sidebar
+                    st.subheader("📈 Συνοπτικά Στατιστικά")
+                    
+                    # Regional breakdown
+                    if 'Περιφέρεια' in df.columns:
+                        region_counts = df['Περιφέρεια'].value_counts()
+                        st.write("**🗺️ Έργα ανά Περιφέρεια:**")
+                        for region, count in region_counts.head(8).items():
+                            percentage = (count / len(df)) * 100
+                            st.write(f"• **{region}**: {count:,} ({percentage:.1f}%)")
+                    
+                    # Top prefectures
+                    if 'Νομός' in df.columns:
+                        prefecture_counts = df['Νομός'].value_counts()
+                        st.write("**🏛️ Top 5 Νομοί:**")
+                        for prefecture, count in prefecture_counts.head(5).items():
+                            st.write(f"• {prefecture}: {count}")
+                else:
+                    st.error("❌ Αποτυχία φόρτωσης αρχείου")
+                    return
         else:
-            available_prefectures = ['Όλοι'] + sorted(df[df['Περιφέρεια'] == selected_region]['Νομός'].unique().tolist())
-        selected_prefecture = st.selectbox("📍 Επιλογή Νομού", available_prefectures, key='selected_prefecture')
-
-    # Filter data based on selections
+            st.info("👆 Ανεβάστε το Excel αρχείο για να ξεκινήσετε")
+            return
+    
+    # Check if data exists
+    if 'df' not in st.session_state:
+        st.info("📁 Παρακαλώ φορτώστε το Excel αρχείο από την πλαϊνή μπάρα")
+        return
+    
+    df = st.session_state['df']
+    
+    # Enhanced filter section
+    st.subheader("🎯 Φίλτρα Επιλογής")
+    
+    col1, col2, col3 = st.columns(3)
+    
+    with col1:
+        regions = ['Όλες'] + sorted(df['Περιφέρεια'].unique().tolist())
+        selected_region = st.selectbox(
+            "🗺️ Περιφέρεια:",
+            regions,
+            key="region_selector"
+        )
+    
+    with col2:
+        # Dynamic prefecture selection
+        if selected_region and selected_region != 'Όλες':
+            available_prefectures = sorted(df[df['Περιφέρεια'] == selected_region]['Νομός'].unique())
+        else:
+            available_prefectures = sorted(df['Νομός'].unique())
+        
+        prefectures = ['Όλοι'] + available_prefectures
+        selected_prefecture = st.selectbox(
+            "🏛️ Νομός:",
+            prefectures,
+            key="prefecture_selector"
+        )
+    
+    with col3:
+        # Quick project type filter
+        project_types = ['Όλα'] + sorted(df['Κατηγορία Έργου'].dropna().unique())
+        selected_type = st.selectbox(
+            "🏗️ Είδος Έργου:",
+            project_types,
+            key="quick_type_filter"
+        )
+    
+    # Apply quick filter
     display_df = df.copy()
-    if selected_region != 'Όλες':
-        display_df = display_df[display_df['Περιφέρεια'] == selected_region]
-    if selected_prefecture != 'Όλοι':
-        display_df = display_df[display_df['Νομός'] == selected_prefecture]
+    if selected_type != 'Όλα':
+        display_df = display_df[display_df['Κατηγορία Έργου'] == selected_type]
+    
+    # Διαδραστική αναζήτηση
+    with st.expander("🔍 Αναζήτηση Έργων", expanded=False):
+        col1, col2, col3 = st.columns(3)
+        
+        with col1:
+            search_title = st.text_input(
+                "🔍 Αναζήτηση στον τίτλο:",
+                key="search_title"
+            )
+        
+        with col2:
+            search_deya = st.selectbox(
+                "🏢 ΔΕΥΑ/Δήμος:",
+                ['Όλα'] + sorted(df['Φορέας Ύδρευσης'].unique()),
+                key="search_deya"
+            )
+        
+        with col3:
+            # Φίλτρο προϋπολογισμού
+            budget_col = 'Προϋπολογισμός (συνολική ΔΔ προ ΦΠΑ)'
+            if budget_col in df.columns:
+                budget_values = df[budget_col].dropna()
+                if len(budget_values) > 0:
+                    min_budget, max_budget = st.slider(
+                        "💰 Εύρος Προϋπολογισμού (€):",
+                        min_value=int(budget_values.min()),
+                        max_value=int(budget_values.max()),
+                        value=(int(budget_values.min()), int(budget_values.max())),
+                        step=10000,
+                        key="budget_slider"
+                    )
+        
+        # Εφαρμογή φίλτρων αναζήτησης
+        search_df = df.copy()
+        
+        if search_title:
+            title_col = next((col for col in df.columns if 'τίτλος' in col.lower()), None)
+            if title_col:
+                search_df = search_df[search_df[title_col].str.contains(search_title, case=False, na=False)]
+        
+        if search_deya != 'Όλα':
+            search_df = search_df[search_df['Φορέας Ύδρευσης'] == search_deya]
+        
+        if budget_col in df.columns and 'min_budget' in locals():
+            search_df = search_df[
+                (search_df[budget_col] >= min_budget) & 
+                (search_df[budget_col] <= max_budget)
+            ]
+        
+        if len(search_df) != len(df):
+            st.success(f"🎯 Βρέθηκαν {len(search_df):,} έργα που ταιριάζουν στα κριτήρια")
+            
+            # Εμφάνιση αποτελεσμάτων
+            display_columns = [
+                col for col in ['Τίτλος Έργου', 'Φορέας Ύδρευσης', 'Νομός', budget_col, 'Κατηγορία Έργου']
+                if col in search_df.columns
+            ]
+            
+            st.dataframe(search_df[display_columns].head(10), use_container_width=True)
+            
+            if len(search_df) > 10:
+                st.info(f"📋 Εμφανίζονται τα πρώτα 10 από {len(search_df)} αποτελέσματα")
+            
+            # Ενημέρωση των display_df για τις καρτέλες
+            display_df = search_df.copy()
 
     # Create tabs for different views
     tab1, tab2, tab3, tab4, tab5 = st.tabs([
         "🗺️ Διαδραστικός Χάρτης ανά Νομό", 
         "📊 Διαδραστικά Γραφήματα", 
         "📋 Συγκεντρωτικοί Πίνακες",
-        "📈 Ανάλυση Προόδου Έργων",
+        "🔍 Ανάλυση Προόδου Έργων",
         "📍 Λεπτομερής Ανάλυση ανά Νομό/Δήμο"
     ])
 
     with tab1:
         st.subheader("🗺️ Διαδραστικός Χάρτης ανά Νομό")
         m = create_interactive_map_by_prefecture(display_df)
-        st_folium(m, width=725, height=500)
+        map_data = st_folium(m, width=725, height=500)  # Render map and capture interaction
+        if map_data and 'last_clicked_popup' in map_data and map_data['last_clicked_popup']:
+            popup_html = map_data['last_clicked_popup']['html']
+            prefecture_name_match = re.search(r'<h3>(.*?)</h3>', popup_html)
+            if prefecture_name_match:
+                prefecture_name = prefecture_name_match.group(1).strip()
+                st.session_state['selected_prefecture_from_map'] = prefecture_name
+        
+        if 'selected_prefecture_from_map' in st.session_state and st.session_state['selected_prefecture_from_map']:
+            st.subheader(f"Έργα για το Νομό: {st.session_state['selected_prefecture_from_map']}")
+            prefecture_projects = display_df[display_df['Νομός'] == st.session_state['selected_prefecture_from_map']]
+            st.dataframe(prefecture_projects, use_container_width=True)
     
     with tab2:
         create_interactive_charts(display_df, selected_region, selected_prefecture)
@@ -2265,37 +2412,81 @@ def main():
     # Data export functionality
     with st.expander("📁 Εξαγωγή Δεδομένων"):
         export_format = st.selectbox("Επιλέξτε μορφή εξαγωγής:", ["CSV", "Excel"])
-        
-        def convert_df_to_csv(df):
-            return df.to_csv(index=False).encode('utf-8')
-        
-        def convert_df_to_excel(df):
-            output = BytesIO()
-            df.to_excel(output, index=False, engine='openpyxl')
-            output.seek(0)
-            return output.getvalue()
-        
         if export_format == "CSV":
-            csv_data = convert_df_to_csv(display_df)
-            st.download_button(
-                label="📥 Εξαγωγή CSV",
-                data=csv_data,
-                file_name="water_projects_data.csv",
-                mime="text/csv",
-                key="download_csv"
-            )
+            @st.cache
+            def convert_df(df):
+                return df.to_csv(index=False).encode('utf-8')
+            csv = convert_df(display_df)
+            st.download_button("Εξαγωγή CSV", csv, "data.csv", "text/csv")
         elif export_format == "Excel":
-            excel_data = convert_df_to_excel(display_df)
-            st.download_button(
-                label="📥 Εξαγωγή Excel",
-                data=excel_data,
-                file_name="water_projects_data.xlsx", 
-                mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-                key="download_excel"
-            )
+            @st.cache
+            def convert_df(df):
+                return df.to_excel(index=False).encode('utf-8')
+            excel = convert_df(display_df)
+            st.download_button("Εξαγωγή Excel", excel, "data.xlsx", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
 
-if __name__ == "__main__":
-    main()
+def create_detailed_regional_analysis(df, selected_region=None, selected_prefecture=None):
+    """Λεπτομερής ανάλυση έργων ανά νομό και δήμο με προϋπολογισμούς."""
+    
+    st.subheader("📍 Λεπτομερής Ανάλυση ανά Νομό/Δήμο")
+    st.markdown("Εξερευνήστε αναλυτικά τα έργα, προϋπολογισμούς και στατιστικά για κάθε νομό και δήμο")
+    
+    # Φίλτρα επιλογής
+    col1, col2, col3 = st.columns(3)
+    
+    with col1:
+        analysis_level = st.radio(
+            "🎯 Επίπεδο Ανάλυσης:",
+            ["Ανά Νομό", "Ανά Δήμο/ΔΕΥΑ", "Σύγκριση Νομών"],
+            key="analysis_level"
+        )
+    
+    with col2:
+        # Επιλογή συγκεκριμένου νομού για βαθύτερη ανάλυση
+        prefectures_list = ['Όλοι'] + sorted(df['Νομός'].unique().tolist())
+        focus_prefecture = st.selectbox(
+            "🏛️ Επιλογή Νομού για Ανάλυση:",
+            prefectures_list,
+            key="focus_prefecture"
+        )
+    
+    with col3:
+        # Επιλογή παραμέτρου ανάλυσης
+        analysis_param = st.selectbox(
+            "📊 Παράμετρος Ανάλυσης:",
+            ["Προϋπολογισμός", "Αριθμός Έργων", "Πληθυσμός", "Χρόνος Ολοκλήρωσης"],
+            key="analysis_param"
+        )
+    
+    # Ανάλυση ανά επίπεδο
+    if analysis_level == "Ανά Νομό":
+        create_prefecture_analysis(df, analysis_param, focus_prefecture)
+    elif analysis_level == "Ανά Δήμο/ΔΕΥΑ":
+        create_municipality_analysis(df, analysis_param, focus_prefecture)
+    else:
+        create_prefecture_comparison(df, analysis_param)
+
+def create_prefecture_analysis(df, analysis_param, focus_prefecture):
+    """Ανάλυση ανά νομό."""
+    st.subheader("🏛️ Ανάλυση ανά Νομό")
+    
+    # Προετοιμασία δεδομένων
+    budget_col = 'Προϋπολογισμός (συνολική ΔΔ προ ΦΠΑ)'
+    pop_col = next((col for col in df.columns if 'πληθυσμός' in col.lower()), None)
+    time_col = next((col for col in df.columns if any(word in col.lower() for word in ['χρόνος', 'μήνες'])), None)
+    
+    # Ομαδοποίηση ανά νομό
+    prefecture_stats = df.groupby('Νομός').agg({
+        'Α/Α': 'count',
+        'Φορέας Ύδρευσης': 'nunique',
+        budget_col: ['sum', 'mean', 'count'] if budget_col in df.columns and df[budget_col].notna().sum() > 0 else 'count',
+        pop_col: 'sum' if pop_col else 'count',
+        time_col: 'mean' if time_col else 'count'
+    }).round(2)
+    
+    # Flatten columns
+    prefecture_stats.columns = [
+        'Αριθμός Έργων', 'Αριθμός ΔΕΥΑ/Δήμων', 
         'Συνολικός Προϋπολογισμός', 'Μέσος Προϋπολογισμός', 'Έργα με Προϋπολογισμό',
         'Συνολικός Πληθυσμός', 'Μέση Διάρκεια (μήνες)'
     ]
@@ -2759,7 +2950,58 @@ def create_export_summary(df):
     
     return summary
 
+def create_prefecture_export(df):
+    """Εξαγωγή δεδομένων ανά νομό."""
+    return df.groupby('Νομός').agg({
+        'Α/Α': 'count',
+        'Φορέας Ύδρευσης': 'nunique',
+        'Περιφέρεια': 'first'
+    }).reset_index()
 
+def create_municipality_export(df):
+    """Εξαγωγή δεδομένων ανά δήμο."""
+    return df.groupby(['Φορέας Ύδρευσης', 'Νομός']).agg({
+        'Α/Α': 'count',
+        'Περιφέρεια': 'first'
+    }).reset_index()
+
+    # Export δεδομένων
+    st.subheader("📥 Εξαγωγή Δεδομένων")
+    
+    col1, col2, col3 = st.columns(3)
+    
+    with col1:
+        if st.button("📊 Εξαγωγή Συγκεντρωτικών", key="export_summary"):
+            summary_data = create_export_summary(display_df)
+            csv = summary_data.to_csv(index=True)
+            st.download_button(
+                label="⬇️ Κατέβασμα CSV",
+                data=csv,
+                file_name="water_projects_summary.csv",
+                mime="text/csv"
+            )
+    
+    with col2:
+        if st.button("🏛️ Εξαγωγή ανά Νομό", key="export_prefectures"):
+            prefecture_data = create_prefecture_export(display_df)
+            csv = prefecture_data.to_csv(index=False)
+            st.download_button(
+                label="⬇️ Κατέβασμα CSV",
+                data=csv,
+                file_name="projects_by_prefecture.csv",
+                mime="text/csv"
+            )
+    
+    with col3:
+        if st.button("🏢 Εξαγωγή ανά ΔΕΥΑ", key="export_municipalities"):
+            municipality_data = create_municipality_export(display_df)
+            csv = municipality_data.to_csv(index=False)
+            st.download_button(
+                label="⬇️ Κατέβασμα CSV",
+                data=csv,
+                file_name="projects_by_municipality.csv",
+                mime="text/csv"
+            )
 
 if __name__ == "__main__":
     main()
