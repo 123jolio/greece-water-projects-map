@@ -2195,10 +2195,72 @@ def convert_df(df):
     # IMPORTANT: Cache the conversion to prevent computation on every rerun
     return df.to_csv(index=False).encode('utf-8')
 
-@st.cache_data
-def convert_df(df):
-    """Converts a DataFrame to a CSV byte string for download."""
-    return df.to_csv(index=False).encode('utf-8')
+def create_export_summary(df):
+    """Δημιουργία συγκεντρωτικών δεδομένων για εξαγωγή."""
+    budget_col = next((col for col in df.columns if 'προϋπολογισμός' in col.lower()), None)
+    
+    summary = df.groupby(['Περιφέρεια', 'Νομός']).agg({
+        'Α/Α': 'count',
+        'Φορέας Ύδρευσης': 'nunique',
+        budget_col: ['sum', 'mean'] if budget_col else 'count'
+    })
+    
+    return summary
+
+def create_prefecture_export(df):
+    """Εξαγωγή δεδομένων ανά νομό."""
+    return df.groupby('Νομός').agg({
+        'Α/Α': 'count',
+        'Φορέας Ύδρευσης': 'nunique',
+        'Περιφέρεια': 'first'
+    }).reset_index()
+
+def create_municipality_export(df):
+    """Εξαγωγή δεδομένων ανά δήμο."""
+    return df.groupby(['Φορέας Ύδρευσης', 'Νομός']).agg({
+        'Α/Α': 'count',
+        'Περιφέρεια': 'first'
+    }).reset_index()
+
+# Add this section to tab5 or create a new tab for advanced exports
+def create_advanced_export_section(df):
+    """Advanced export functionality section."""
+    st.subheader("📥 Προηγμένη Εξαγωγή Δεδομένων")
+    
+    col1, col2, col3 = st.columns(3)
+    
+    with col1:
+        summary_data = create_export_summary(df)
+        csv = summary_data.to_csv(index=True).encode('utf-8')
+        st.download_button(
+            label="📊 Εξαγωγή Συγκεντρωτικών",
+            data=csv,
+            file_name="water_projects_summary.csv",
+            mime="text/csv",
+            key="download_summary"
+        )
+    
+    with col2:
+        prefecture_data = create_prefecture_export(df)
+        csv = prefecture_data.to_csv(index=False).encode('utf-8')
+        st.download_button(
+            label="🏛️ Εξαγωγή ανά Νομό",
+            data=csv,
+            file_name="projects_by_prefecture.csv",
+            mime="text/csv",
+            key="download_prefectures"
+        )
+    
+    with col3:
+        municipality_data = create_municipality_export(df)
+        csv = municipality_data.to_csv(index=False).encode('utf-8')
+        st.download_button(
+            label="🏢 Εξαγωγή ανά ΔΕΥΑ",
+            data=csv,
+            file_name="projects_by_municipality.csv",
+            mime="text/csv",
+            key="download_municipalities"
+        )
 
 def main():
     """Main function to run the Streamlit app."""
@@ -2248,67 +2310,53 @@ def main():
         selected_prefecture = st.selectbox("📍 Επιλογή Νομού", available_prefectures, key='selected_prefecture')
 
     # --- Main content tabs ---
-    tab1, tab2, tab3, tab4, tab5 = st.tabs([
+    tab_titles = [
         "🗺️ Διαδραστικός Χάρτης", 
         "📊 Διαδραστικά Διαγράμματα", 
         "📈 Ανάλυση Προόδου Έργων",
         "💰 Ανάλυση Χρηματοδότησης",
-        "📋 Αναλυτικοί Πίνακες Περιφέρειας"
-    ])
+        "📋 Αναλυτικοί Πίνακες Περιφέρειας",
+        "📥 Προηγμένη Εξαγωγή"
+    ]
+    tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs(tab_titles)
 
     with tab1:
-        st.subheader("🗺️ Διαδραστικός Χάρτης ανά Νομό")
-        m = create_interactive_map_by_prefecture(df)
-        map_data = st_folium(m, width=725, height=500)  # Render map and capture interaction
-        if map_data and 'last_clicked_popup' in map_data and map_data['last_clicked_popup']:
-            popup_html = map_data['last_clicked_popup']['html']
-            prefecture_name_match = re.search(r'<h3>(.*?)</h3>', popup_html)
-            if prefecture_name_match:
-                prefecture_name = prefecture_name_match.group(1).strip()
-                st.session_state['selected_prefecture_from_map'] = prefecture_name
-        
-        if 'selected_prefecture_from_map' in st.session_state and st.session_state['selected_prefecture_from_map']:
-            st.subheader(f"Έργα για το Νομό: {st.session_state['selected_prefecture_from_map']}")
-            prefecture_projects = df[df['Νομός'] == st.session_state['selected_prefecture_from_map']]
-            st.dataframe(prefecture_projects, use_container_width=True)
+        st.header("🗺️ Διαδραστικός Χάρτης Έργων Ύδρευσης")
+        create_interactive_map(df, selected_region, selected_prefecture)
 
     with tab2:
-        create_interactive_charts(df, selected_region, selected_prefecture)
+        st.header("📊 Διαδραστικά Διαγράμματα")
+        create_interactive_charts(df)
 
     with tab3:
+        st.header("📈 Ανάλυση Προόδου Έργων")
         create_project_progress_analysis(df, selected_region, selected_prefecture)
 
     with tab4:
+        st.header("💰 Ανάλυση Χρηματοδότησης")
         create_funding_analysis(df, selected_region, selected_prefecture)
 
     with tab5:
-        create_detailed_regional_analysis(df, selected_region, selected_prefecture)
+        st.header("📋 Αναλυτικοί Πίνακες Περιφέρειας")
+        create_summary_tables(df, selected_region, selected_prefecture)
+
+    with tab6:
+        create_advanced_export_section(df)
         
-    # --- Data Export ---
-    st.markdown("--- ")
-    with st.expander("📥 Εξαγωγή Δεδομένων"): 
-        export_df = df.copy()
-        if selected_region != 'Όλες':
-            export_df = export_df[export_df['Περιφέρεια'] == selected_region]
-        if selected_prefecture != 'Όλοι':
-            export_df = export_df[export_df['Νομός'] == selected_prefecture]
-
-        st.write(f"Επιλεγμένα έργα προς εξαγωγή: {len(export_df)}")
-
-        col1, col2 = st.columns(2)
-        with col1:
-            csv_data = export_df.to_csv(index=False).encode('utf-8')
-            st.download_button(
-                label="💾 Λήψη ως CSV",
-                data=csv_data,
-                file_name=f'water_projects_{selected_region}_{selected_prefecture}.csv',
-                mime='text/csv',
-                key='download_csv_main'
-            )
-        with col2:
-            excel_data = BytesIO()
-            with pd.ExcelWriter(excel_data, engine='openpyxl') as writer:
-                export_df.to_excel(writer, index=False, sheet_name='Projects')
+    # Data export functionality - FIXED VERSION
+    with st.expander("📁 Εξαγωγή Τρέχουσας Προβολής"):
+        export_format = st.selectbox("Επιλέξτε μορφή εξαγωγής:", ["CSV", "Excel"], key="export_format_main")
+        
+        # Define conversion functions outside the conditional blocks
+        def convert_df_to_csv(df):
+            return df.to_csv(index=False).encode('utf-8')
+        
+        def convert_df_to_excel(df):
+            output = BytesIO()
+            with pd.ExcelWriter(output, engine='xlsxwriter') as writer:
+                df.to_excel(writer, index=False, sheet_name='Projects')
+            return output.getvalue()
+        
             excel_data.seek(0)
             st.download_button(
                 label="💾 Λήψη ως Excel",
