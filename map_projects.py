@@ -2294,62 +2294,6 @@ def convert_df(df):
 
 if __name__ == "__main__":
     main()
-    # Φίλτρα επιλογής
-    col1, col2, col3 = st.columns(3)
-    
-    with col1:
-        analysis_level = st.radio(
-            "🎯 Επίπεδο Ανάλυσης:",
-            ["Ανά Νομό", "Ανά Δήμο/ΔΕΥΑ", "Σύγκριση Νομών"],
-            key="analysis_level"
-        )
-    
-    with col2:
-        # Επιλογή συγκεκριμένου νομού για βαθύτερη ανάλυση
-        prefectures_list = ['Όλοι'] + sorted(df['Νομός'].unique().tolist())
-        focus_prefecture = st.selectbox(
-            "🏛️ Επιλογή Νομού για Ανάλυση:",
-            prefectures_list,
-            key="focus_prefecture"
-        )
-    
-    with col3:
-        # Επιλογή παραμέτρου ανάλυσης
-        analysis_param = st.selectbox(
-            "📊 Παράμετρος Ανάλυσης:",
-            ["Προϋπολογισμός", "Αριθμός Έργων", "Πληθυσμός", "Χρόνος Ολοκλήρωσης"],
-            key="analysis_param"
-        )
-    
-    # Ανάλυση ανά επίπεδο
-    if analysis_level == "Ανά Νομό":
-        create_prefecture_analysis(df, analysis_param, focus_prefecture)
-    elif analysis_level == "Ανά Δήμο/ΔΕΥΑ":
-        create_municipality_analysis(df, analysis_param, focus_prefecture)
-    else:
-        create_prefecture_comparison(df, analysis_param)
-
-def create_prefecture_analysis(df, analysis_param, focus_prefecture):
-    """Ανάλυση ανά νομό."""
-    st.subheader("🏛️ Ανάλυση ανά Νομό")
-    
-    # Προετοιμασία δεδομένων
-    budget_col = 'Προϋπολογισμός (συνολική ΔΔ προ ΦΠΑ)'
-    pop_col = next((col for col in df.columns if 'πληθυσμός' in col.lower()), None)
-    time_col = next((col for col in df.columns if any(word in col.lower() for word in ['χρόνος', 'μήνες'])), None)
-    
-    # Ομαδοποίηση ανά νομό
-    prefecture_stats = df.groupby('Νομός').agg({
-        'Α/Α': 'count',
-        'Φορέας Ύδρευσης': 'nunique',
-        budget_col: ['sum', 'mean', 'count'] if budget_col in df.columns and df[budget_col].notna().sum() > 0 else 'count',
-        pop_col: 'sum' if pop_col else 'count',
-        time_col: 'mean' if time_col else 'count'
-    }).round(2)
-    
-    # Flatten columns
-    prefecture_stats.columns = [
-        'Αριθμός Έργων', 'Αριθμός ΔΕΥΑ/Δήμων', 
         'Συνολικός Προϋπολογισμός', 'Μέσος Προϋπολογισμός', 'Έργα με Προϋπολογισμό',
         'Συνολικός Πληθυσμός', 'Μέση Διάρκεια (μήνες)'
     ]
