@@ -1695,11 +1695,10 @@ def create_project_progress_analysis(df, selected_region, selected_prefecture):
             st.metric("✅ Έργα με Έγκριση", f"{approval_count:,}")
     
     # Detailed Progress Analysis
-    tab1, tab2, tab3, tab4 = st.tabs([
+    tab1, tab2, tab3 = st.tabs([
         "📊 Ανάλυση Φάσεων", 
         "📈 Ανάλυση Ολοκλήρωσης", 
-        "📅 Χρονική Ανάλυση", 
-        "💰 Ανάλυση Χρηματοδότησης"
+        "📅 Χρονική Ανάλυση"
     ])
     
     with tab1:
@@ -1710,9 +1709,6 @@ def create_project_progress_analysis(df, selected_region, selected_prefecture):
     
     with tab3:
         create_timeline_analysis(df)
-    
-    with tab4:
-        create_funding_analysis(df, selected_region, selected_prefecture)
 
 def create_phase_analysis(df):
     """Detailed project phase analysis."""
