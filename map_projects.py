@@ -8,7 +8,8 @@ from streamlit_folium import st_folium
 import plotly.express as px
 import plotly.graph_objects as go
 from io import BytesIO
-import re 
+import re
+import openpyxl 
 
 # Comprehensive Greek Regions and Prefectures with coordinates
 GREEK_PREFECTURES_COORDS = {
@@ -2190,204 +2191,109 @@ def create_summary_tables(df, selected_region=None, selected_prefecture=None):
         'Περιφέρεια': 'Περιφέρεια'
     }).sort_values('Αριθμός Έργων', ascending=False)
     
-@st.cache_data
 def convert_df(df):
     # IMPORTANT: Cache the conversion to prevent computation on every rerun
     return df.to_csv(index=False).encode('utf-8')
-
-def create_export_summary(df):
-    """Δημιουργία συγκεντρωτικών δεδομένων για εξαγωγή."""
-    budget_col = next((col for col in df.columns if 'προϋπολογισμός' in col.lower()), None)
-    
-    summary = df.groupby(['Περιφέρεια', 'Νομός']).agg({
-        'Α/Α': 'count',
-        'Φορέας Ύδρευσης': 'nunique',
-        budget_col: ['sum', 'mean'] if budget_col else 'count'
-    })
-    
-    return summary
-
-def create_prefecture_export(df):
-    """Εξαγωγή δεδομένων ανά νομό."""
-    return df.groupby('Νομός').agg({
-        'Α/Α': 'count',
-        'Φορέας Ύδρευσης': 'nunique',
-        'Περιφέρεια': 'first'
-    }).reset_index()
-
-def create_municipality_export(df):
-    """Εξαγωγή δεδομένων ανά δήμο."""
-    return df.groupby(['Φορέας Ύδρευσης', 'Νομός']).agg({
-        'Α/Α': 'count',
-        'Περιφέρεια': 'first'
-    }).reset_index()
-
-# Add this section to tab5 or create a new tab for advanced exports
-def create_advanced_export_section(df):
-    """Advanced export functionality section."""
-    st.subheader("📥 Προηγμένη Εξαγωγή Δεδομένων")
-    
-    col1, col2, col3 = st.columns(3)
-    
-    with col1:
-        summary_data = create_export_summary(df)
-        csv = summary_data.to_csv(index=True).encode('utf-8')
-        st.download_button(
-            label="📊 Εξαγωγή Συγκεντρωτικών",
-            data=csv,
-            file_name="water_projects_summary.csv",
-            mime="text/csv",
-            key="download_summary"
-        )
-    
-    with col2:
-        prefecture_data = create_prefecture_export(df)
-        csv = prefecture_data.to_csv(index=False).encode('utf-8')
-        st.download_button(
-            label="🏛️ Εξαγωγή ανά Νομό",
-            data=csv,
-            file_name="projects_by_prefecture.csv",
-            mime="text/csv",
-            key="download_prefectures"
-        )
-    
-    with col3:
-        municipality_data = create_municipality_export(df)
-        csv = municipality_data.to_csv(index=False).encode('utf-8')
-        st.download_button(
-            label="🏢 Εξαγωγή ανά ΔΕΥΑ",
-            data=csv,
-            file_name="projects_by_municipality.csv",
-            mime="text/csv",
-            key="download_municipalities"
-        )
-
-def main():
     """Main function to run the Streamlit app."""
     st.set_page_config(page_title="Διαδραστικός Χάρτης Έργων Ύδρευσης", layout="wide", initial_sidebar_state="expanded")
-
-    # --- Sidebar Setup ---
+    
+    # --- Sidebar --- #
     with st.sidebar:
-        logo_path = "loho.png"
-        if os.path.exists(logo_path):
-            st.image(logo_path, use_container_width=True)
-        else:
-            st.warning("Δεν βρέθηκε το αρχείο του λογότυπου: loho.png")
         st.title("🗺️ Διαδραστικός Χάρτης Έργων Ύδρευσης")
-        st.header("🔍 Φίλτρα & Επιλογές")
+        st.header("📂 Φόρτωση Δεδομένων")
+        uploaded_file = st.file_uploader(
+            "📊 Ανεβάστε το Excel αρχείο:", 
+            type=['xlsx', 'xls'],
+            help="Επιλέξτε αρχείο Excel με έργα ύδρευσης"
+        )
+        
+        if uploaded_file is None:
+            st.warning("⚠️ Παρακαλώ ανεβάστε ένα αρχείο Excel για να συνεχίσετε.")
+            st.stop()
 
-    st.title("🗺️ Διαδραστικός Χάρτης Έργων Ύδρευσης Ελλάδας")
-    st.markdown("**🚀 Διαδραστική ανάλυση έργων ύδρευσης ανά νομό και περιφέρεια**")
+    # Load and process data
+    df = load_data(uploaded_file)
+    df = preprocess_data(df)
 
-    # --- Data Loading ---
-    excel_file_path = 'corrected_teset_.xlsx'
-    # Use session state to load data only once
-    if 'df' not in st.session_state:
-        if os.path.exists(excel_file_path):
-            with st.spinner("⏳ Φόρτωση και ανάλυση δεδομένων..."):
-                st.session_state.df = load_and_analyze_excel_enhanced(excel_file_path)
-        else:
-            st.error(f"Δεν βρέθηκε το αρχείο δεδομένων: {excel_file_path}")
-            st.session_state.df = None
-
-    # --- Main Application Logic ---
-    if st.session_state.df is None:
-        st.warning("⚠️ Δεν έχουν φορτωθεί δεδομένα. Παρακαλώ ελέγξτε το αρχείο Excel.")
-        return
-
-    df = st.session_state.df
-
-    # Display filters in the sidebar
+    # --- Sidebar Filters ---
     with st.sidebar:
-        all_regions = ['Όλες'] + sorted(df['Περιφέρεια'].unique().tolist())
-        selected_region = st.selectbox("📍 Επιλογή Περιφέρειας", all_regions, key='selected_region')
+        st.header("🔍 Φίλτρα")
+        available_regions = ['Όλες'] + sorted(df['Περιφέρεια'].unique().tolist())
+        selected_region = st.selectbox("🌍 Επιλογή Περιφέρειας", available_regions, key='selected_region')
 
         if selected_region == 'Όλες':
             available_prefectures = ['Όλοι'] + sorted(df['Νομός'].unique().tolist())
         else:
             available_prefectures = ['Όλοι'] + sorted(df[df['Περιφέρεια'] == selected_region]['Νομός'].unique().tolist())
-        
         selected_prefecture = st.selectbox("📍 Επιλογή Νομού", available_prefectures, key='selected_prefecture')
 
-    # --- Main content tabs ---
-    tab_titles = [
-        "🗺️ Διαδραστικός Χάρτης", 
-        "📊 Διαδραστικά Διαγράμματα", 
+    # Filter data based on selections
+    display_df = df.copy()
+    if selected_region != 'Όλες':
+        display_df = display_df[display_df['Περιφέρεια'] == selected_region]
+    if selected_prefecture != 'Όλοι':
+        display_df = display_df[display_df['Νομός'] == selected_prefecture]
+
+    # Create tabs for different views
+    tab1, tab2, tab3, tab4, tab5 = st.tabs([
+        "🗺️ Διαδραστικός Χάρτης ανά Νομό", 
+        "📊 Διαδραστικά Γραφήματα", 
+        "📋 Συγκεντρωτικοί Πίνακες",
         "📈 Ανάλυση Προόδου Έργων",
-        "💰 Ανάλυση Χρηματοδότησης",
-        "📋 Αναλυτικοί Πίνακες Περιφέρειας",
-        "📥 Προηγμένη Εξαγωγή"
-    ]
-    tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs(tab_titles)
+        "📍 Λεπτομερής Ανάλυση ανά Νομό/Δήμο"
+    ])
 
     with tab1:
-        st.header("🗺️ Διαδραστικός Χάρτης Έργων Ύδρευσης")
-        create_interactive_map(df, selected_region, selected_prefecture)
-
+        st.subheader("🗺️ Διαδραστικός Χάρτης ανά Νομό")
+        m = create_interactive_map_by_prefecture(display_df)
+        st_folium(m, width=725, height=500)
+    
     with tab2:
-        st.header("📊 Διαδραστικά Διαγράμματα")
-        create_interactive_charts(df)
-
+        create_interactive_charts(display_df, selected_region, selected_prefecture)
+    
     with tab3:
-        st.header("📈 Ανάλυση Προόδου Έργων")
-        create_project_progress_analysis(df, selected_region, selected_prefecture)
-
+        create_summary_tables(display_df, selected_region, selected_prefecture)
+    
     with tab4:
-        st.header("💰 Ανάλυση Χρηματοδότησης")
-        create_funding_analysis(df, selected_region, selected_prefecture)
+        create_project_progress_analysis(display_df, selected_region, selected_prefecture)
 
     with tab5:
-        st.header("📋 Αναλυτικοί Πίνακες Περιφέρειας")
-        create_summary_tables(df, selected_region, selected_prefecture)
+        create_detailed_regional_analysis(display_df, selected_region, selected_prefecture)
 
-    with tab6:
-        create_advanced_export_section(df)
+    # Data export functionality
+    with st.expander("📁 Εξαγωγή Δεδομένων"):
+        export_format = st.selectbox("Επιλέξτε μορφή εξαγωγής:", ["CSV", "Excel"])
         
-    # Data export functionality - FIXED VERSION
-    with st.expander("📁 Εξαγωγή Τρέχουσας Προβολής"):
-        export_format = st.selectbox("Επιλέξτε μορφή εξαγωγής:", ["CSV", "Excel"], key="export_format_main")
-        
-        # Define conversion functions outside the conditional blocks
         def convert_df_to_csv(df):
             return df.to_csv(index=False).encode('utf-8')
         
         def convert_df_to_excel(df):
             output = BytesIO()
-            with pd.ExcelWriter(output, engine='xlsxwriter') as writer:
-                df.to_excel(writer, index=False, sheet_name='Projects')
+            df.to_excel(output, index=False, engine='openpyxl')
+            output.seek(0)
             return output.getvalue()
         
-            excel_data.seek(0)
+        if export_format == "CSV":
+            csv_data = convert_df_to_csv(display_df)
             st.download_button(
-                label="💾 Λήψη ως Excel",
+                label="📥 Εξαγωγή CSV",
+                data=csv_data,
+                file_name="water_projects_data.csv",
+                mime="text/csv",
+                key="download_csv"
+            )
+        elif export_format == "Excel":
+            excel_data = convert_df_to_excel(display_df)
+            st.download_button(
+                label="📥 Εξαγωγή Excel",
                 data=excel_data,
-                file_name=f'water_projects_{selected_region}_{selected_prefecture}.xlsx',
-                mime='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-                key='download_excel_main'
+                file_name="water_projects_data.xlsx", 
+                mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                key="download_excel"
             )
 
-    # Data export functionality
-    with st.expander("📁 Εξαγωγή Δεδομένων"):
-        export_format = st.selectbox("Επιλέξτε μορφή εξαγωγής:", ["CSV", "Excel"])
-        if export_format == "CSV":
-            @st.cache
-            def convert_df(df):
-                return df.to_csv(index=False).encode('utf-8')
-            csv = convert_df(display_df)
-            st.download_button("Εξαγωγή CSV", csv, "data.csv", "text/csv")
-        elif export_format == "Excel":
-            @st.cache
-            def convert_df(df):
-                return df.to_excel(index=False).encode('utf-8')
-            excel = convert_df(display_df)
-            st.download_button("Εξαγωγή Excel", excel, "data.xlsx", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
-
-def create_detailed_regional_analysis(df, selected_region=None, selected_prefecture=None):
-    """Λεπτομερής ανάλυση έργων ανά νομό και δήμο με προϋπολογισμούς."""
-    
-    st.subheader("📍 Λεπτομερής Ανάλυση ανά Νομό/Δήμο")
-    st.markdown("Εξερευνήστε αναλυτικά τα έργα, προϋπολογισμούς και στατιστικά για κάθε νομό και δήμο")
-    
+if __name__ == "__main__":
+    main()
     # Φίλτρα επιλογής
     col1, col2, col3 = st.columns(3)
     
