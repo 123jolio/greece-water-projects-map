@@ -2195,6 +2195,11 @@ def convert_df(df):
     # IMPORTANT: Cache the conversion to prevent computation on every rerun
     return df.to_csv(index=False).encode('utf-8')
 
+@st.cache_data
+def convert_df(df):
+    """Converts a DataFrame to a CSV byte string for download."""
+    return df.to_csv(index=False).encode('utf-8')
+
 def main():
     """Main function to run the Streamlit app."""
     st.set_page_config(page_title="Διαδραστικός Χάρτης Έργων Ύδρευσης", layout="wide", initial_sidebar_state="expanded")
