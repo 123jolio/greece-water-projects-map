@@ -2199,6 +2199,11 @@ def create_summary_tables(df, selected_region=None, selected_prefecture=None):
 def main():
     """Main function to run the Streamlit app."""
     st.set_page_config(page_title="Διαδραστικός Χάρτης Έργων Ύδρευσης", layout="wide", initial_sidebar_state="expanded")
+
+    @st.cache_data
+    def convert_df(df):
+        # IMPORTANT: Cache the conversion to prevent computation on every rerun
+        return df.to_csv(index=False).encode('utf-8')
     
     # --- Sidebar --- #
     with st.sidebar:
@@ -2413,11 +2418,8 @@ def main():
     with st.expander("📁 Εξαγωγή Δεδομένων"):
         export_format = st.selectbox("Επιλέξτε μορφή εξαγωγής:", ["CSV", "Excel"])
         if export_format == "CSV":
-            @st.cache
-            def convert_df(df):
-                return df.to_csv(index=False).encode('utf-8')
             csv = convert_df(display_df)
-            st.download_button("Εξαγωγή CSV", csv, "data.csv", "text/csv")
+            st.download_button("Εξαγωγή CSV", csv, "data.csv", "text/csv", key='export_csv_main')
         elif export_format == "Excel":
             @st.cache
             def convert_df(df):
@@ -2938,70 +2940,9 @@ def create_single_prefecture_deep_dive(df, prefecture_name):
             mime="text/csv"
         )
 
-def create_export_summary(df):
-    """Δημιουργία συγκεντρωτικών δεδομένων για εξαγωγή."""
-    budget_col = 'Προϋπολογισμός (συνολική ΔΔ προ ΦΠΑ)'
-    
-    summary = df.groupby(['Περιφέρεια', 'Νομός']).agg({
-        'Α/Α': 'count',
-        'Φορέας Ύδρευσης': 'nunique',
-        budget_col: ['sum', 'mean', 'count'] if budget_col in df.columns else 'count'
-    })
-    
-    return summary
 
-def create_prefecture_export(df):
-    """Εξαγωγή δεδομένων ανά νομό."""
-    return df.groupby('Νομός').agg({
-        'Α/Α': 'count',
-        'Φορέας Ύδρευσης': 'nunique',
-        'Περιφέρεια': 'first'
-    }).reset_index()
 
-def create_municipality_export(df):
-    """Εξαγωγή δεδομένων ανά δήμο."""
-    return df.groupby(['Φορέας Ύδρευσης', 'Νομός']).agg({
-        'Α/Α': 'count',
-        'Περιφέρεια': 'first'
-    }).reset_index()
 
-    # Export δεδομένων
-    st.subheader("📥 Εξαγωγή Δεδομένων")
-    
-    col1, col2, col3 = st.columns(3)
-    
-    with col1:
-        if st.button("📊 Εξαγωγή Συγκεντρωτικών", key="export_summary"):
-            summary_data = create_export_summary(display_df)
-            csv = summary_data.to_csv(index=True)
-            st.download_button(
-                label="⬇️ Κατέβασμα CSV",
-                data=csv,
-                file_name="water_projects_summary.csv",
-                mime="text/csv"
-            )
-    
-    with col2:
-        if st.button("🏛️ Εξαγωγή ανά Νομό", key="export_prefectures"):
-            prefecture_data = create_prefecture_export(display_df)
-            csv = prefecture_data.to_csv(index=False)
-            st.download_button(
-                label="⬇️ Κατέβασμα CSV",
-                data=csv,
-                file_name="projects_by_prefecture.csv",
-                mime="text/csv"
-            )
-    
-    with col3:
-        if st.button("🏢 Εξαγωγή ανά ΔΕΥΑ", key="export_municipalities"):
-            municipality_data = create_municipality_export(display_df)
-            csv = municipality_data.to_csv(index=False)
-            st.download_button(
-                label="⬇️ Κατέβασμα CSV",
-                data=csv,
-                file_name="projects_by_municipality.csv",
-                mime="text/csv"
-            )
 
 if __name__ == "__main__":
     main()
