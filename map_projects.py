@@ -8,6 +8,7 @@ import plotly.graph_objects as go
 from io import BytesIO
 import re
 import os
+from streamlit.components.v1 import components
 
 # Set page config first
 st.set_page_config(
