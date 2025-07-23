@@ -2198,7 +2198,10 @@ def create_summary_tables(df, selected_region=None, selected_prefecture=None):
 
 def main():
     """Main function to run the Streamlit app."""
-    st.set_page_config(page_title="Διαδραστικός Χάρτης Έργων Ύδρευσης", layout="wide", initial_sidebar_state="expanded")
+    import traceback
+    
+    try:
+        st.set_page_config(page_title="Διαδραστικός Χάρτης Έργων Ύδρευσης", layout="wide", initial_sidebar_state="expanded")
 
     @st.cache_data
     def convert_df(df):
@@ -2439,6 +2442,24 @@ def main():
                 return df.to_excel(index=False).encode('utf-8')
             excel = convert_df(display_df)
             st.download_button("Εξαγωγή Excel", excel, "data.xlsx", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+    
+    except Exception as e:
+        st.error("❌ Σφάλμα στη λειτουργία της εφαρμογής")
+        st.error(f"Λεπτομέρειες σφάλματος: {str(e)}")
+        st.text("Πλήρες traceback:")
+        st.code(traceback.format_exc())
+        
+        # Show session state for debugging
+        if 'df' in st.session_state:
+            st.subheader("Περιεχόμενα DataFrame:")
+            st.write("Στήλες:", st.session_state['df'].columns.tolist())
+            st.write("Πρώτες 5 γραμμές:")
+            st.dataframe(st.session_state['df'].head())
+        
+        # Add a button to clear the session state
+        if st.button("🔄 Επαναφορά εφαρμογής"):
+            st.session_state.clear()
+            st.experimental_rerun()
 
 def create_detailed_regional_analysis(df, selected_region=None, selected_prefecture=None):
     """Λεπτομερής ανάλυση έργων ανά νομό και δήμο με προϋπολογισμούς."""
