@@ -1,15 +1,20 @@
 #!/bin/bash
 
-# Exit on error
-set -e
+# Exit on error and print commands
+set -ex
 
-# Update package lists
-echo "Updating package lists..."
+# Set timezone to prevent tzdata interactive prompt
+export DEBIAN_FRONTEND=noninteractive
+ln -fs /usr/share/zoneinfo/UTC /etc/localtime
+
+# Update package lists and upgrade existing packages
+echo "Updating and upgrading system packages..."
 apt-get update
+apt-get upgrade -y
 
 # Install system dependencies
 echo "Installing system dependencies..."
-apt-get install -y \
+apt-get install -y --no-install-recommends \
     libxml2-dev \
     libxslt1-dev \
     python3-lxml \
@@ -17,19 +22,29 @@ apt-get install -y \
     python3-pip \
     python3-venv \
     gcc \
-    g++
+    g++ \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/*
 
-# Create virtual environment
-echo "Creating virtual environment..."
+# Create and activate virtual environment
+echo "Setting up Python virtual environment..."
 python3 -m venv /home/adminuser/venv
 source /home/adminuser/venv/bin/activate
 
-# Upgrade pip and setuptools
-echo "Upgrading pip and setuptools..."
-pip install --upgrade pip setuptools wheel
+# Upgrade pip and setuptools first
+python -m pip install --upgrade pip==23.0.1 setuptools==68.0.0 wheel==0.40.0
 
-# Install Python dependencies
+# Install build dependencies first
+python -m pip install --no-cache-dir numpy==1.24.3
+
+# Install other requirements
 echo "Installing Python dependencies..."
-pip install -r requirements.txt
+python -m pip install --no-cache-dir -r requirements.txt
 
-echo "Setup completed successfully"
+# Verify installation
+echo "Verifying installations..."
+python -c "import pandas; print(f'Pandas version: {pandas.__version__}')"
+python -c "import streamlit; print(f'Streamlit version: {streamlit.__version__}')"
+
+echo "✅ Setup completed successfully!"
+exit 0
