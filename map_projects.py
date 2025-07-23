@@ -2198,7 +2198,15 @@ def create_summary_tables(df, selected_region=None, selected_prefecture=None):
 
 def main():
     """Main function to run the Streamlit app."""
-    st.set_page_config(page_title="Διαδραστικός Χάρτης Έργων Ύδρευσης", layout="wide", initial_sidebar_state="expanded")
+    import traceback
+    import sys
+    
+    try:
+        st.set_page_config(page_title="Διαδραστικός Χάρτης Έργων Ύδρευσης", layout="wide", initial_sidebar_state="expanded")
+        
+        # Log environment information
+        st.sidebar.write("Python version:", sys.version)
+        st.sidebar.write("Streamlit version:", st.__version__)
     
     # --- Sidebar --- #
     with st.sidebar:
@@ -2942,66 +2950,172 @@ def create_export_summary(df):
     """Δημιουργία συγκεντρωτικών δεδομένων για εξαγωγή."""
     budget_col = 'Προϋπολογισμός (συνολική ΔΔ προ ΦΠΑ)'
     
-    summary = df.groupby(['Περιφέρεια', 'Νομός']).agg({
+    # Create a copy to avoid SettingWithCopyWarning
+    df_export = df.copy()
+    
+    # Ensure we have the required columns
+    required_columns = ['Περιφέρεια', 'Νομός', 'Φορέας Ύδρευσης']
+    for col in required_columns:
+        if col not in df_export.columns:
+            df_export[col] = 'Άγνωστο'
+    
+    # Group by region and prefecture
+    summary = df_export.groupby(['Περιφέρεια', 'Νομός']).agg({
         'Α/Α': 'count',
         'Φορέας Ύδρευσης': 'nunique',
-        budget_col: ['sum', 'mean', 'count'] if budget_col in df.columns else 'count'
-    })
+    }).reset_index()
+    
+    # Add budget information if available
+    if budget_col in df_export.columns and pd.api.types.is_numeric_dtype(df_export[budget_col]):
+        budget_summary = df_export.groupby(['Περιφέρεια', 'Νομός'])[budget_col].agg(['sum', 'mean']).reset_index()
+        summary = summary.merge(budget_summary, on=['Περιφέρεια', 'Νομός'], how='left')
+    
+    # Rename columns for clarity
+    summary.columns = [
+        'Περιφέρεια',
+        'Νομός',
+        'Αριθμός Έργων',
+        'Αριθμός ΔΕΥΑ',
+    ]
+    
+    if 'sum' in summary.columns:
+        summary = summary.rename(columns={
+            'sum': 'Συνολικός Προϋπολογισμός (€)',
+            'mean': 'Μέσος Προϋπολογισμός (€)'
+        })
     
     return summary
 
 def create_prefecture_export(df):
     """Εξαγωγή δεδομένων ανά νομό."""
-    return df.groupby('Νομός').agg({
+    # Ensure required columns exist
+    df_export = df.copy()
+    required_columns = ['Νομός', 'Φορέας Ύδρευσης', 'Περιφέρεια']
+    for col in required_columns:
+        if col not in df_export.columns:
+            df_export[col] = 'Άγνωστο'
+    
+    # Group by prefecture
+    result = df_export.groupby('Νομός').agg({
         'Α/Α': 'count',
         'Φορέας Ύδρευσης': 'nunique',
         'Περιφέρεια': 'first'
     }).reset_index()
+    
+    # Rename columns for clarity
+    result.columns = [
+        'Νομός',
+        'Αριθμός Έργων',
+        'Αριθμός ΔΕΥΑ',
+        'Περιφέρεια'
+    ]
+    
+    return result
 
 def create_municipality_export(df):
     """Εξαγωγή δεδομένων ανά δήμο."""
-    return df.groupby(['Φορέας Ύδρευσης', 'Νομός']).agg({
+    # Ensure required columns exist
+    df_export = df.copy()
+    required_columns = ['Φορέας Ύδρευσης', 'Νομός', 'Περιφέρεια']
+    for col in required_columns:
+        if col not in df_export.columns:
+            df_export[col] = 'Άγνωστο'
+    
+    # Group by municipality and prefecture
+    result = df_export.groupby(['Φορέας Ύδρευσης', 'Νομός']).agg({
         'Α/Α': 'count',
         'Περιφέρεια': 'first'
     }).reset_index()
+    
+    # Rename columns for clarity
+    result.columns = [
+        'Φορέας Ύδρευσης',
+        'Νομός',
+        'Αριθμός Έργων',
+        'Περιφέρεια'
+    ]
+    
+    return result
 
-    # Export δεδομένων
+def add_export_section(display_df):
+    """Add export section to the Streamlit UI."""
     st.subheader("📥 Εξαγωγή Δεδομένων")
     
     col1, col2, col3 = st.columns(3)
     
     with col1:
         if st.button("📊 Εξαγωγή Συγκεντρωτικών", key="export_summary"):
-            summary_data = create_export_summary(display_df)
-            csv = summary_data.to_csv(index=True)
-            st.download_button(
-                label="⬇️ Κατέβασμα CSV",
-                data=csv,
-                file_name="water_projects_summary.csv",
-                mime="text/csv"
-            )
+            try:
+                summary_data = create_export_summary(display_df)
+                csv = summary_data.to_csv(index=True, encoding='utf-8-sig')
+                st.download_button(
+                    label="⬇️ Κατέβασμα CSV",
+                    data=csv,
+                    file_name="water_projects_summary.csv",
+                    mime="text/csv"
+                )
+            except Exception as e:
+                st.error(f"Σφάλμα κατά τη δημιουργία συγκεντρωτικών: {str(e)}")
     
     with col2:
         if st.button("🏛️ Εξαγωγή ανά Νομό", key="export_prefectures"):
-            prefecture_data = create_prefecture_export(display_df)
-            csv = prefecture_data.to_csv(index=False)
-            st.download_button(
-                label="⬇️ Κατέβασμα CSV",
-                data=csv,
-                file_name="projects_by_prefecture.csv",
-                mime="text/csv"
-            )
+            try:
+                prefecture_data = create_prefecture_export(display_df)
+                csv = prefecture_data.to_csv(index=False, encoding='utf-8-sig')
+                st.download_button(
+                    label="⬇️ Κατέβασμα CSV",
+                    data=csv,
+                    file_name="projects_by_prefecture.csv",
+                    mime="text/csv"
+                )
+            except Exception as e:
+                st.error(f"Σφάλμα κατά τη δημιουργία εξαγωγής νομών: {str(e)}")
     
     with col3:
         if st.button("🏢 Εξαγωγή ανά ΔΕΥΑ", key="export_municipalities"):
-            municipality_data = create_municipality_export(display_df)
-            csv = municipality_data.to_csv(index=False)
-            st.download_button(
-                label="⬇️ Κατέβασμα CSV",
-                data=csv,
-                file_name="projects_by_municipality.csv",
-                mime="text/csv"
-            )
+            try:
+                municipality_data = create_municipality_export(display_df)
+                csv = municipality_data.to_csv(index=False, encoding='utf-8-sig')
+                st.download_button(
+                    label="⬇️ Κατέβασμα CSV",
+                    data=csv,
+                    file_name="projects_by_municipality.csv",
+                    mime="text/csv"
+                )
+            except Exception as e:
+                st.error(f"Σφάλμα κατά τη δημιουργία εξαγωγής ΔΕΥΑ: {str(e)}")
 
 if __name__ == "__main__":
-    main()
+    try:
+        st.set_page_config(
+            page_title="Διαδραστικός Χάρτης Έργων Ύδρευσης",
+            layout="wide",
+            initial_sidebar_state="expanded"
+        )
+        
+        # Add export section to the main function
+        if 'df' in st.session_state:
+            add_export_section(st.session_state['df'])
+            
+        main()
+        
+    except Exception as e:
+        st.error("❌ Κρίσιμο Σφάλμα")
+        st.error(f"Σφάλμα: {str(e)}")
+        st.text("Πλήρες traceback:")
+        st.code(traceback.format_exc())
+        
+        # Show environment information
+        st.sidebar.subheader("Πληροφορίες Συστήματος")
+        st.sidebar.write("Python version:", sys.version)
+        st.sidebar.write("Streamlit version:", st.__version__)
+        
+        if 'df' in st.session_state:
+            st.subheader("Περιεχόμενα DataFrame:")
+            st.write("Στήλες:", st.session_state['df'].columns.tolist())
+            st.write("Πρώτες 3 γραμμές:")
+            st.dataframe(st.session_state['df'].head(3) if not st.session_state['df'].empty else "Το DataFrame είναι άδειο")
+        
+        if st.button("🔄 Επαναφόρτωση εφαρμογής"):
+            st.session_state.clear()
+            st.experimental_rerun()
