@@ -1,18 +1,20 @@
 #!/bin/bash
 set -e
 
-echo "===== Setting up Python environment ====="
+echo "===== Setting up Python 3.10 environment ====="
 
-# Install system dependencies
+# Update package lists
 echo "Updating package lists..."
 apt-get update -qq
 
-echo "Installing system dependencies..."
+# Install Python 3.10 and required system packages
+echo "Installing Python 3.10 and system dependencies..."
 DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
     python3.10 \
     python3.10-dev \
     python3.10-venv \
     python3-pip \
+    python3-wheel \
     libxml2-dev \
     libxslt1-dev \
     gcc \
@@ -24,7 +26,7 @@ DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
     proj-bin \
     && rm -rf /var/lib/apt/lists/*
 
-# Ensure Python 3.10 is the default
+# Set Python 3.10 as the default
 update-alternatives --install /usr/bin/python3 python3 /usr/bin/python3.10 1
 update-alternatives --set python3 /usr/bin/python3.10
 
