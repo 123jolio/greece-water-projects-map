@@ -7,10 +7,15 @@ import plotly.express as px
 import plotly.graph_objects as go
 from io import BytesIO
 import re
-import os
-import streamlit.components.v1 as components
 
-# Comprehensive Greek Regions and Prefectures with coordinates
+# Set page config first
+st.set_page_config(
+    page_title="Διαδραστικός Χάρτης Έργων Ύδρευσης",
+    layout="wide",
+    initial_sidebar_state="expanded"
+)
+
+# Greek regions and prefectures with coordinates
 GREEK_PREFECTURES_COORDS = {
     # Ανατολική Μακεδονία - Θράκη
     'Έβρος': {'lat': 40.8477, 'lon': 25.8738, 'region': 'Ανατολ. Μακεδονία - Θράκη', 'color': '#FF6B6B'},
