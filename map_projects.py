@@ -2205,11 +2205,17 @@ def main():
         # Construct path to logo relative to the script
         script_dir = os.path.dirname(os.path.abspath(__file__))
         # The logo is one directory up from the script's directory
-        st.title("🗺️ Διαδραστικός Χάρτης Έργων Ύδρευσης")
+        logo_path = os.path.join(script_dir, "..", "loho.png")
 
+        if os.path.exists(logo_path):
+            st.image(logo_path, use_container_width=True)
+        else:
+            st.warning(f"Δεν βρέθηκε το αρχείο του λογότυπου: {logo_path}")
+        st.title("🗺️ Διαδραστικός Χάρτης Έργων Ύδρευσης")
+    
     st.title("🗺️ Διαδραστικός Χάρτης Έργων Ύδρευσης Ελλάδας")
     st.markdown("**🚀 Διαδραστική ανάλυση έργων ύδρευσης ανά νομό και περιφέρεια**")
-
+    
     # Enhanced sidebar
     with st.sidebar:
         st.header("📂 Φόρτωση Δεδομένων")
