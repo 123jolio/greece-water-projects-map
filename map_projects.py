@@ -480,7 +480,51 @@ def load_and_analyze_excel_enhanced(excel_file):
     try:
         df = pd.read_excel(excel_file, sheet_name=0)
         
-        # ... (rest of the function remains the same)
+        # Basic data cleaning
+        df = df.dropna(how='all')
+        
+        # Clean string columns
+        string_columns = df.select_dtypes(include=['object']).columns
+        for col in string_columns:
+            df[col] = df[col].astype(str).str.strip()
+            df[col] = df[col].replace(['nan', 'None', '', 'NaN'], pd.NA)
+        
+        # Add prefecture mapping
+        water_utility_col = None
+        for col_name in ['Φορέας Ύδρευσης', 'ΔΕΥΑ', 'Φορέας', 'Water_Utility']:
+            if col_name in df.columns:
+                water_utility_col = col_name
+                break
+        
+        if water_utility_col is None:
+            df['Φορέας Ύδρευσης'] = 'Άγνωστος'
+            water_utility_col = 'Φορέας Ύδρευσης'
+        
+        # Create normalized mapping
+        df['normalized_utility'] = df[water_utility_col].apply(normalize_greek)
+        normalized_map = {normalize_greek(k): v for k, v in DEYA_TO_PREFECTURE.items()}
+        df['Νομός'] = df['normalized_utility'].map(normalized_map).fillna('Άλλος')
+        
+        # Add region mapping
+        df['Περιφέρεια'] = df['Νομός'].map(
+            lambda x: GREEK_PREFECTURES_COORDS.get(x, {}).get('region', 'Άλλη')
+        )
+        
+        # Convert budget column if exists
+        budget_column = 'Προϋπολογισμός (συνολική ΔΔ προ ΦΠΑ)'
+        if budget_column in df.columns:
+            df[budget_column] = df[budget_column].astype(str).str.replace(',', '').str.replace('€', '').str.replace(' ', '')
+            df[budget_column] = pd.to_numeric(df[budget_column], errors='coerce')
+        
+        # Add project type column
+        if 'Κατηγορία Έργου' not in df.columns:
+            df['Κατηγορία Έργου'] = 'Άλλο'
+        
+        return df
+        
+    except Exception as e:
+        st.error(f"❌ Σφάλμα φόρτωσης: {e}")
+        return None
 
 def create_interactive_map_by_prefecture(df):
     """Create interactive map showing projects by prefecture (νομός)."""
