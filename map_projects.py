@@ -2199,21 +2199,44 @@ def create_summary_tables(df, selected_region=None, selected_prefecture=None):
 
 def main():
     """Main function to run the Streamlit app."""
-    st.set_page_config(page_title="Διαδραστικός Χάρτης Έργων Ύδρευσης", layout="wide", initial_sidebar_state="expanded")
+    # Set page config at the top level
+    st.set_page_config(
+        page_title="Διαδραστικός Χάρτης Έργων Ύδρευσης",
+        layout="wide",
+        initial_sidebar_state="expanded"
+    )
+    
+    # Add custom CSS for better performance
+    st.markdown("""
+    <style>
+        /* Hide Streamlit default elements */
+        .main > div:first-child { padding-top: 0; }
+        /* Optimize rendering */
+        .stDataFrame { width: 100% !important; }
+        /* Improve sidebar performance */
+        .sidebar .sidebar-content { will-change: auto; }
+    </style>
+    """, unsafe_allow_html=True)
     
     # --- Sidebar --- #
     with st.sidebar:
-        # Construct path to logo relative to the script
-        script_dir = os.path.dirname(os.path.abspath(__file__))
-        # The logo is one directory up from the script's directory
-        logo_path = os.path.join(script_dir, "..", "loho.png")
-
-        if os.path.exists(logo_path):
-            st.image(logo_path, use_container_width=True)
+        # Clear cache button
+        if st.button('🔄 Επαναφόρτωση & Καθαρισμός Cache'):
+            st.cache_data.clear()
+            st.rerun()
+            
+        # FIXED: Simplified logo loading
+        if os.path.exists("logo.png"):
+            st.image("logo.png", use_container_width=True)
+        elif os.path.exists("loho.png"):
+            st.image("loho.png", use_container_width=True)
         else:
-            st.warning(f"Δεν βρέθηκε το αρχείο του λογότυπου: {logo_path}")
+            st.markdown("### 🗺️ Έργα Ύδρευσης")
+            
         st.title("🗺️ Διαδραστικός Χάρτης Έργων Ύδρευσης")
+        st.markdown("---")
     
+    # Main content
     st.title("🗺️ Διαδραστικός Χάρτης Έργων Ύδρευσης Ελλάδας")
     st.markdown("**🚀 Διαδραστική ανάλυση έργων ύδρευσης ανά νομό και περιφέρεια**")
     
@@ -2232,22 +2255,34 @@ def main():
                 df = load_and_analyze_excel_enhanced(uploaded_file)
                 
                 if df is not None:
+                    # Cache the loaded dataframe
                     st.session_state['df'] = df
-                    st.success(f"✅ Επιτυχής φόρτωση!")
                     
-                    # Enhanced statistics in sidebar
-                    st.subheader("📈 Συνοπτικά Στατιστικά")
+                    # Show success message with data stats
+                    st.success(f"✅ Φορτώθηκαν {len(df):,} εγγραφές με {len(df.columns)} πεδία")
                     
-                    # Regional breakdown
-                    if 'Περιφέρεια' in df.columns:
-                        region_counts = df['Περιφέρεια'].value_counts()
-                        st.write("**🗺️ Έργα ανά Περιφέρεια:**")
-                        for region, count in region_counts.head(8).items():
-                            percentage = (count / len(df)) * 100
-                            st.write(f"• **{region}**: {count:,} ({percentage:.1f}%)")
-                    
-                    # Top prefectures
-                    if 'Νομός' in df.columns:
+                    # Enhanced statistics in expander for better organization
+                    with st.expander("📊 Συνοπτικά Στατιστικά", expanded=True):
+                        # Regional breakdown with progress bars
+                        if 'Περιφέρεια' in df.columns:
+                            st.subheader("🗺️ Έργα ανά Περιφέρεια")
+                            region_counts = df['Περιφέρεια'].value_counts()
+                            total = len(df)
+                            
+                            # Show top 5 regions with progress bars
+                            for region, count in region_counts.head(5).items():
+                                percentage = (count / total) * 100
+                                st.write(f"**{region}**")
+                                st.progress(percentage / 100, f"{count:,} έργα ({percentage:.1f}%)")
+                            
+                            # Show "other" if there are more regions
+                            if len(region_counts) > 5:
+                                other_count = total - sum(region_counts.head(5))
+                                other_percentage = (other_count / total) * 100
+                                st.write(f"**Άλλες Περιφέρειες**")
+                                st.progress(other_percentage / 100, f"{other_count:,} έργα ({other_percentage:.1f}%)")
+                        
+                        # Top prefectures with metrics
                         prefecture_counts = df['Νομός'].value_counts()
                         st.write("**🏛️ Top 5 Νομοί:**")
                         for prefecture, count in prefecture_counts.head(5).items():
@@ -2413,18 +2448,33 @@ def main():
     # Data export functionality
     with st.expander("📁 Εξαγωγή Δεδομένων"):
         export_format = st.selectbox("Επιλέξτε μορφή εξαγωγής:", ["CSV", "Excel"])
+        
         if export_format == "CSV":
-            @st.cache
-            def convert_df(df):
-                return df.to_csv(index=False).encode('utf-8')
-            csv = convert_df(display_df)
-            st.download_button("Εξαγωγή CSV", csv, "data.csv", "text/csv")
+            csv_data = convert_df_to_csv(display_df)
+            st.download_button(
+                label="📥 Εξαγωγή CSV",
+                data=csv_data,
+                file_name="water_projects_data.csv",
+                mime="text/csv"
+            )
         elif export_format == "Excel":
-            @st.cache
-            def convert_df(df):
-                return df.to_excel(index=False).encode('utf-8')
-            excel = convert_df(display_df)
-            st.download_button("Εξαγωγή Excel", excel, "data.xlsx", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+            excel_data = convert_df_to_excel(display_df)
+            st.download_button(
+                label="📥 Εξαγωγή Excel", 
+                data=excel_data,
+                file_name="water_projects_data.xlsx",
+                mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+            )
+
+@st.cache_data
+def convert_df_to_csv(df):
+    return df.to_csv(index=False).encode('utf-8')
+
+@st.cache_data
+def convert_df_to_excel(df):
+    output = BytesIO()
+    df.to_excel(output, index=False, engine='openpyxl')
+    return output.getvalue()
 
 def create_detailed_regional_analysis(df, selected_region=None, selected_prefecture=None):
     """Λεπτομερής ανάλυση έργων ανά νομό και δήμο με προϋπολογισμούς."""
