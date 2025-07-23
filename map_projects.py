@@ -2236,26 +2236,39 @@ def main():
                 df = load_and_analyze_excel_enhanced(uploaded_file)
                 
                 if df is not None:
+                    # Check if DataFrame is empty
+                    if df.empty:
+                        st.error("❌ Το φορτωμένο αρχείο Excel είναι άδειο")
+                        return
+                        
+                    # Check for required columns
+                    required_columns = ['Περιφέρεια', 'Νομός']
+                    missing_columns = [col for col in required_columns if col not in df.columns]
+                    
+                    if missing_columns:
+                        st.error(f"❌ Το αρχείο Excel δεν περιέχει τις απαιτούμενες στήλες: {', '.join(missing_columns)}")
+                        st.error("Διαθέσιμες στήλες στο αρχείο:")
+                        st.write(df.columns.tolist())
+                        return
+                        
                     st.session_state['df'] = df
-                    st.success(f"✅ Επιτυχής φόρτωση!")
+                    st.success(f"✅ Επιτυχής φόρτωση! Βρέθηκαν {len(df)} εγγραφές.")
                     
                     # Enhanced statistics in sidebar
                     st.subheader("📈 Συνοπτικά Στατιστικά")
                     
                     # Regional breakdown
-                    if 'Περιφέρεια' in df.columns:
-                        region_counts = df['Περιφέρεια'].value_counts()
-                        st.write("**🗺️ Έργα ανά Περιφέρεια:**")
-                        for region, count in region_counts.head(8).items():
-                            percentage = (count / len(df)) * 100
-                            st.write(f"• **{region}**: {count:,} ({percentage:.1f}%)")
+                    region_counts = df['Περιφέρεια'].value_counts()
+                    st.write("**🗺️ Έργα ανά Περιφέρεια:**")
+                    for region, count in region_counts.head(8).items():
+                        percentage = (count / len(df)) * 100
+                        st.write(f"• **{region}**: {count:,} ({percentage:.1f}%)")
                     
                     # Top prefectures
-                    if 'Νομός' in df.columns:
-                        prefecture_counts = df['Νομός'].value_counts()
-                        st.write("**🏛️ Top 5 Νομοί:**")
-                        for prefecture, count in prefecture_counts.head(5).items():
-                            st.write(f"• {prefecture}: {count}")
+                    prefecture_counts = df['Νομός'].value_counts()
+                    st.write("**🏛️ Top 5 Νομοί:**")
+                    for prefecture, count in prefecture_counts.head(5).items():
+                        st.write(f"• {prefecture}: {count}")
                 else:
                     st.error("❌ Αποτυχία φόρτωσης αρχείου")
                     return
