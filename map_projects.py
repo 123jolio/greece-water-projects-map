@@ -2198,39 +2198,19 @@ def create_summary_tables(df, selected_region=None, selected_prefecture=None):
 
 def main():
     """Main function to run the Streamlit app."""
-    import traceback
-    
-    try:
-        st.set_page_config(page_title="Διαδραστικός Χάρτης Έργων Ύδρευσης", layout="wide", initial_sidebar_state="expanded")
-
-    @st.cache_data
-    def convert_df(df):
-        # IMPORTANT: Cache the conversion to prevent computation on every rerun
-        return df.to_csv(index=False).encode('utf-8')
+    st.set_page_config(page_title="Διαδραστικός Χάρτης Έργων Ύδρευσης", layout="wide", initial_sidebar_state="expanded")
     
     # --- Sidebar --- #
     with st.sidebar:
-        # Try multiple possible locations for the logo
-        possible_logo_paths = [
-            os.path.join("static", "loho.png"),  # For Streamlit Cloud
-            os.path.join(os.path.dirname(__file__), "..", "static", "loho.png"),  # For local development
-            os.path.join(os.path.dirname(__file__), "loho.png"),  # Fallback location
-            "loho.png"  # Last resort
-        ]
-        
-        logo_path = None
-        for path in possible_logo_paths:
-            if os.path.exists(path):
-                logo_path = path
-                break
-                
-        if logo_path and os.path.exists(logo_path):
-            try:
-                st.image(logo_path, use_container_width=True)
-            except Exception as e:
-                st.warning(f"Δεν ήταν δυνατή η φόρτωση του λογότυπου: {str(e)}")
+        # Construct path to logo relative to the script
+        script_dir = os.path.dirname(os.path.abspath(__file__))
+        # The logo is one directory up from the script's directory
+        logo_path = os.path.join(script_dir, "..", "loho.png")
+
+        if os.path.exists(logo_path):
+            st.image(logo_path, use_container_width=True)
         else:
-            st.warning("Δεν βρέθηκε το αρχείο του λογότυπου. Βεβαιωθείτε ότι το αρχείο 'loho.png' βρίσκεται στον φάκελο 'static/'.")
+            st.warning(f"Δεν βρέθηκε το αρχείο του λογότυπου: {logo_path}")
         st.title("🗺️ Διαδραστικός Χάρτης Έργων Ύδρευσης")
     
     st.title("🗺️ Διαδραστικός Χάρτης Έργων Ύδρευσης Ελλάδας")
@@ -2251,39 +2231,26 @@ def main():
                 df = load_and_analyze_excel_enhanced(uploaded_file)
                 
                 if df is not None:
-                    # Check if DataFrame is empty
-                    if df.empty:
-                        st.error("❌ Το φορτωμένο αρχείο Excel είναι άδειο")
-                        return
-                        
-                    # Check for required columns
-                    required_columns = ['Περιφέρεια', 'Νομός']
-                    missing_columns = [col for col in required_columns if col not in df.columns]
-                    
-                    if missing_columns:
-                        st.error(f"❌ Το αρχείο Excel δεν περιέχει τις απαιτούμενες στήλες: {', '.join(missing_columns)}")
-                        st.error("Διαθέσιμες στήλες στο αρχείο:")
-                        st.write(df.columns.tolist())
-                        return
-                        
                     st.session_state['df'] = df
-                    st.success(f"✅ Επιτυχής φόρτωση! Βρέθηκαν {len(df)} εγγραφές.")
+                    st.success(f"✅ Επιτυχής φόρτωση!")
                     
                     # Enhanced statistics in sidebar
                     st.subheader("📈 Συνοπτικά Στατιστικά")
                     
                     # Regional breakdown
-                    region_counts = df['Περιφέρεια'].value_counts()
-                    st.write("**🗺️ Έργα ανά Περιφέρεια:**")
-                    for region, count in region_counts.head(8).items():
-                        percentage = (count / len(df)) * 100
-                        st.write(f"• **{region}**: {count:,} ({percentage:.1f}%)")
+                    if 'Περιφέρεια' in df.columns:
+                        region_counts = df['Περιφέρεια'].value_counts()
+                        st.write("**🗺️ Έργα ανά Περιφέρεια:**")
+                        for region, count in region_counts.head(8).items():
+                            percentage = (count / len(df)) * 100
+                            st.write(f"• **{region}**: {count:,} ({percentage:.1f}%)")
                     
                     # Top prefectures
-                    prefecture_counts = df['Νομός'].value_counts()
-                    st.write("**🏛️ Top 5 Νομοί:**")
-                    for prefecture, count in prefecture_counts.head(5).items():
-                        st.write(f"• {prefecture}: {count}")
+                    if 'Νομός' in df.columns:
+                        prefecture_counts = df['Νομός'].value_counts()
+                        st.write("**🏛️ Top 5 Νομοί:**")
+                        for prefecture, count in prefecture_counts.head(5).items():
+                            st.write(f"• {prefecture}: {count}")
                 else:
                     st.error("❌ Αποτυχία φόρτωσης αρχείου")
                     return
@@ -2446,32 +2413,17 @@ def main():
     with st.expander("📁 Εξαγωγή Δεδομένων"):
         export_format = st.selectbox("Επιλέξτε μορφή εξαγωγής:", ["CSV", "Excel"])
         if export_format == "CSV":
+            @st.cache
+            def convert_df(df):
+                return df.to_csv(index=False).encode('utf-8')
             csv = convert_df(display_df)
-            st.download_button("Εξαγωγή CSV", csv, "data.csv", "text/csv", key='export_csv_main')
+            st.download_button("Εξαγωγή CSV", csv, "data.csv", "text/csv")
         elif export_format == "Excel":
             @st.cache
             def convert_df(df):
                 return df.to_excel(index=False).encode('utf-8')
             excel = convert_df(display_df)
             st.download_button("Εξαγωγή Excel", excel, "data.xlsx", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
-    
-    except Exception as e:
-        st.error("❌ Σφάλμα στη λειτουργία της εφαρμογής")
-        st.error(f"Λεπτομέρειες σφάλματος: {str(e)}")
-        st.text("Πλήρες traceback:")
-        st.code(traceback.format_exc())
-        
-        # Show session state for debugging
-        if 'df' in st.session_state:
-            st.subheader("Περιεχόμενα DataFrame:")
-            st.write("Στήλες:", st.session_state['df'].columns.tolist())
-            st.write("Πρώτες 5 γραμμές:")
-            st.dataframe(st.session_state['df'].head())
-        
-        # Add a button to clear the session state
-        if st.button("🔄 Επαναφορά εφαρμογής"):
-            st.session_state.clear()
-            st.experimental_rerun()
 
 def create_detailed_regional_analysis(df, selected_region=None, selected_prefecture=None):
     """Λεπτομερής ανάλυση έργων ανά νομό και δήμο με προϋπολογισμούς."""
@@ -2986,9 +2938,70 @@ def create_single_prefecture_deep_dive(df, prefecture_name):
             mime="text/csv"
         )
 
+def create_export_summary(df):
+    """Δημιουργία συγκεντρωτικών δεδομένων για εξαγωγή."""
+    budget_col = 'Προϋπολογισμός (συνολική ΔΔ προ ΦΠΑ)'
+    
+    summary = df.groupby(['Περιφέρεια', 'Νομός']).agg({
+        'Α/Α': 'count',
+        'Φορέας Ύδρευσης': 'nunique',
+        budget_col: ['sum', 'mean', 'count'] if budget_col in df.columns else 'count'
+    })
+    
+    return summary
 
+def create_prefecture_export(df):
+    """Εξαγωγή δεδομένων ανά νομό."""
+    return df.groupby('Νομός').agg({
+        'Α/Α': 'count',
+        'Φορέας Ύδρευσης': 'nunique',
+        'Περιφέρεια': 'first'
+    }).reset_index()
 
+def create_municipality_export(df):
+    """Εξαγωγή δεδομένων ανά δήμο."""
+    return df.groupby(['Φορέας Ύδρευσης', 'Νομός']).agg({
+        'Α/Α': 'count',
+        'Περιφέρεια': 'first'
+    }).reset_index()
 
+    # Export δεδομένων
+    st.subheader("📥 Εξαγωγή Δεδομένων")
+    
+    col1, col2, col3 = st.columns(3)
+    
+    with col1:
+        if st.button("📊 Εξαγωγή Συγκεντρωτικών", key="export_summary"):
+            summary_data = create_export_summary(display_df)
+            csv = summary_data.to_csv(index=True)
+            st.download_button(
+                label="⬇️ Κατέβασμα CSV",
+                data=csv,
+                file_name="water_projects_summary.csv",
+                mime="text/csv"
+            )
+    
+    with col2:
+        if st.button("🏛️ Εξαγωγή ανά Νομό", key="export_prefectures"):
+            prefecture_data = create_prefecture_export(display_df)
+            csv = prefecture_data.to_csv(index=False)
+            st.download_button(
+                label="⬇️ Κατέβασμα CSV",
+                data=csv,
+                file_name="projects_by_prefecture.csv",
+                mime="text/csv"
+            )
+    
+    with col3:
+        if st.button("🏢 Εξαγωγή ανά ΔΕΥΑ", key="export_municipalities"):
+            municipality_data = create_municipality_export(display_df)
+            csv = municipality_data.to_csv(index=False)
+            st.download_button(
+                label="⬇️ Κατέβασμα CSV",
+                data=csv,
+                file_name="projects_by_municipality.csv",
+                mime="text/csv"
+            )
 
 if __name__ == "__main__":
     main()
