@@ -7,6 +7,7 @@ import plotly.express as px
 import plotly.graph_objects as go
 from io import BytesIO
 import re
+import os
 
 # Set page config first
 st.set_page_config(
@@ -583,13 +584,6 @@ def create_interactive_charts(df, selected_region=None, selected_prefecture=None
 
 def main():
     """Main function to run the Streamlit app."""
-    # Set page config at the top level
-    st.set_page_config(
-        page_title="Διαδραστικός Χάρτης Έργων Ύδρευσης",
-        layout="wide",
-        initial_sidebar_state="expanded"
-    )
-    
     # Add custom CSS for better performance
     st.markdown("""
     <style>
