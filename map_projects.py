@@ -2210,15 +2210,27 @@ def main():
     
     # --- Sidebar --- #
     with st.sidebar:
-        # Construct path to logo relative to the script
-        script_dir = os.path.dirname(os.path.abspath(__file__))
-        # The logo is one directory up from the script's directory
-        logo_path = os.path.join(script_dir, "..", "loho.png")
-
-        if os.path.exists(logo_path):
-            st.image(logo_path, use_container_width=True)
+        # Try multiple possible locations for the logo
+        possible_logo_paths = [
+            os.path.join("static", "loho.png"),  # For Streamlit Cloud
+            os.path.join(os.path.dirname(__file__), "..", "static", "loho.png"),  # For local development
+            os.path.join(os.path.dirname(__file__), "loho.png"),  # Fallback location
+            "loho.png"  # Last resort
+        ]
+        
+        logo_path = None
+        for path in possible_logo_paths:
+            if os.path.exists(path):
+                logo_path = path
+                break
+                
+        if logo_path and os.path.exists(logo_path):
+            try:
+                st.image(logo_path, use_container_width=True)
+            except Exception as e:
+                st.warning(f"Δεν ήταν δυνατή η φόρτωση του λογότυπου: {str(e)}")
         else:
-            st.warning(f"Δεν βρέθηκε το αρχείο του λογότυπου: {logo_path}")
+            st.warning("Δεν βρέθηκε το αρχείο του λογότυπου. Βεβαιωθείτε ότι το αρχείο 'loho.png' βρίσκεται στον φάκελο 'static/'.")
         st.title("🗺️ Διαδραστικός Χάρτης Έργων Ύδρευσης")
     
     st.title("🗺️ Διαδραστικός Χάρτης Έργων Ύδρευσης Ελλάδας")
